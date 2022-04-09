@@ -28,10 +28,13 @@ class ESGNews(GNews):
 
     def get_news_multi_keywords(
         self,
-        keys: list[str],
-        keys_exact_match: list[str],
+        keys: list[str] = [],
+        keys_exact_match: list[str] = [],
         return_df: bool = True,
     ):
+        if not keys and not keys_exact_match:
+            raise ValueError("One of keys or keys_exact_match is required")
+
         logging.info("Getting metadata for articles.")
         all_keys = []
         keys_exact_match = ['"' + key + '"' for key in keys_exact_match]
