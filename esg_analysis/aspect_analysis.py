@@ -7,7 +7,7 @@ from tqdm import tqdm
 from nltk.tokenize import sent_tokenize
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from collections import Counter
-from .data_collection import ESGNews
+from data_collection import ESGNews
 
 logger = logging.getLogger(__name__)
 
@@ -71,10 +71,12 @@ class ESGAnalyzer:
                 ).to(self.device)
                 logits = self.model(**features).logits
                 logits = logits.cpu().detach().numpy()
+                logits[:, 1] = -1000
                 doc_label = self.label_mapping[np.argmax(logits.sum(axis=0))]
                 doc_labels.append(doc_label)
 
         counter = Counter(doc_labels)
+        print(counter)
         return counter.most_common()
 
 
@@ -94,6 +96,33 @@ def get_aspect_analysis_for_company(
             keys=ASPECTS[aspect]["keys"] + company_name.split(),
             keys_exact_match=ASPECTS[aspect]["keys_exact_match"] + [company_name],
         )
-        labels = analyzer.analyze(news_texts=news["text"])
-        results[aspect] = labels
+
+        if len(news.columns) == 0:
+            results[aspect] = []
+        else:
+            labels = analyzer.analyze(news_texts=news["text"])
+            results[aspect] = labels
+
     return results
+
+
+if __name__ == "__main__":
+    import json
+
+    results = {
+        "general electric": None,
+        "ford": None,
+        "tesla": None,
+        # "mercedes": None,
+        # "amazon": None,
+        # "facebook": None
+    }
+    analyzer = ESGAnalyzer(device="cpu")
+    for company in results.keys():
+        torch.cuda.empty_cache()
+        results[company] = get_aspect_analysis_for_company(
+            company, analyzer=analyzer, n_news=50
+        )
+    print(results)
+    with open("output.json", "w") as f:
+        json.dump(results, f, indent=4)

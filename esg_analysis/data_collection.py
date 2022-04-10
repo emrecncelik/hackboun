@@ -5,6 +5,7 @@ import pandas as pd
 from gnews import GNews
 from gnews.utils.constants import BASE_URL
 from tqdm import tqdm
+import snscrape.modules.twitter as sntwitter
 
 
 logger = logging.getLogger(__name__)
@@ -43,7 +44,10 @@ class ESGNews(GNews):
 
         news = pd.DataFrame(self._get_news(url))
         news = self._get_news_article_texts(news, keys_exact_match)
-        return pd.DataFrame(news)
+        if len(news.columns) == 0:
+            return news
+        else:
+            return pd.DataFrame(news)
 
     def _get_news_article_texts(
         self, news: pd.DataFrame, keys_exact_match: list[str] = []
@@ -72,8 +76,25 @@ class ESGNews(GNews):
                 valid_rows.append(row)
 
         filtered_news = pd.DataFrame(valid_rows)
-        filtered_news.columns = news.columns
-        return filtered_news
+        if len(filtered_news.columns) == 0:
+            return filtered_news
+        else:
+            filtered_news.columns = news.columns
+            return filtered_news
+
+
+def get_tweets(keyword):
+    locs = []
+    contents = []
+    for i, tweet in enumerate(
+        sntwitter.TwitterSearchScraper(keyword + ' lang:"en"').get_items()
+    ):  #  + ' since:2022-01-01 until:2022-01-10, lang:"en"'
+        if i >= 100:
+            break
+        contents.append(tweet.content)
+        locs.append(tweet.user.location)
+
+    return contents, locs
 
 
 if __name__ == "__main__":
