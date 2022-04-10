@@ -7,7 +7,7 @@ from tqdm import tqdm
 from nltk.tokenize import sent_tokenize
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from collections import Counter
-from data_collection import ESGNews
+from .data_collection import ESGNews, collect_tweets
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +106,26 @@ def get_aspect_analysis_for_company(
     return results
 
 
+def get_aspect_analysis_for_company_tweets(
+    company_name: str,
+    analyzer: ESGAnalyzer = None,
+    n_tweets: int = 1000,
+):
+    results = {}
+    if not analyzer:
+        analyzer = ESGAnalyzer()
+
+    for aspect in ASPECTS:
+        logging.info(f"Analyzing aspect {aspect}")
+        aspect = aspect.replace("_", " ")
+        key = company_name + " " + aspect
+        tweets = collect_tweets(key, n_tweets)
+        labels = analyzer.analyze(tweets)
+        results[aspect] = labels
+
+    return results
+
+
 if __name__ == "__main__":
     import json
 
@@ -120,9 +140,12 @@ if __name__ == "__main__":
     analyzer = ESGAnalyzer(device="cpu")
     for company in results.keys():
         torch.cuda.empty_cache()
-        results[company] = get_aspect_analysis_for_company(
-            company, analyzer=analyzer, n_news=50
+        # results[company] = get_aspect_analysis_for_company(
+        #     company, analyzer=analyzer, n_news=50
+        # )
+        results[company] = get_aspect_analysis_for_company_tweets(
+            company, analyzer, 3000
         )
     print(results)
-    with open("output.json", "w") as f:
+    with open("output_tweets.json", "w") as f:
         json.dump(results, f, indent=4)

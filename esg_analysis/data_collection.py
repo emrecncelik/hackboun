@@ -83,6 +83,18 @@ class ESGNews(GNews):
             return filtered_news
 
 
+def collect_tweets(key: str, n_tweets: int = 1000):
+    texts = []
+    for n, tweet in enumerate(
+        sntwitter.TwitterSearchScraper(key + ' lang:"en"').get_items()
+    ):
+        if n == n_tweets:
+            break
+        texts.append(tweet.content)
+
+    return texts
+
+
 def get_tweets(keyword):
     locs = []
     contents = []
